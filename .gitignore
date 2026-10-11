@@ -1,0 +1,10 @@
+# Compilação e Binários
+*.exe
+*.o
+*.obj
+*.out
+*.pdb
+
+# VS Code (opcional manter configurações da equipe)
+.vscode/.browse.c_cpp.db*
+.vscode/*.log
