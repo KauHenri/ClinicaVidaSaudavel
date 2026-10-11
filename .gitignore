@@ -8,3 +8,4 @@
 # VS Code (opcional manter configurações da equipe)
 .vscode/.browse.c_cpp.db*
 .vscode/*.log
+
