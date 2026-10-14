@@ -36,10 +36,20 @@ try {
     ))
     Executar-Comando "./$pastaBuild/test_estruturas.exe" @()
 
-    # Apenas os objetos dos TADs usam o alocador de teste. O substituto chama
+    $modulosClinica = @('clinica.c', 'paciente.c', 'fila.c', 'medico.c', 'pilha.c')
+    Executar-Comando $comandoCompilador ($opcoes + $modulosClinica + @(
+        'tests/test_integracao.c', '-o', "$pastaBuild/test_integracao.exe"
+    ))
+    Executar-Comando "./$pastaBuild/test_integracao.exe" @()
+    Executar-Comando $comandoCompilador ($opcoes + $modulosClinica + @(
+        'main.c', '-o', "$pastaBuild/clinica.exe"
+    ))
+    & "$PSScriptRoot/test_menu.ps1" -Executavel "./$pastaBuild/clinica.exe"
+
+    # Apenas os objetos dos quatro TADs usam o alocador de teste. O substituto chama
     # malloc/free reais, sem macros, evitando recursao e mudancas na producao.
     $substituicoes = @('-include', 'tests/substituir_alocacao.h')
-    foreach ($modulo in @('medico', 'pilha')) {
+    foreach ($modulo in @('medico', 'pilha', 'paciente', 'fila')) {
         Executar-Comando $comandoCompilador ($opcoes + $substituicoes + @(
             '-c', "$modulo.c", '-o', "$pastaBuild/$modulo.o"
         ))
@@ -50,6 +60,12 @@ try {
         '-o', "$pastaBuild/test_falhas.exe"
     ))
     Executar-Comando "./$pastaBuild/test_falhas.exe" @()
+    Executar-Comando $comandoCompilador ($opcoes + @(
+        '-DTESTAR_ALOCACAO', 'tests/test_integracao.c', 'tests/alocacao_teste.c', 'clinica.c',
+        "$pastaBuild/medico.o", "$pastaBuild/pilha.o", "$pastaBuild/paciente.o", "$pastaBuild/fila.o",
+        '-o', "$pastaBuild/test_falhas_integracao.exe"
+    ))
+    Executar-Comando "./$pastaBuild/test_falhas_integracao.exe" @()
     Write-Output "Validacao $sufixo concluida."
 } finally {
     $env:PATH = $pathAnterior

@@ -125,16 +125,16 @@ static void testar_medicos(void)
 
 static Atendimento exemplo(int id)
 {
-    Atendimento dados = {id, "Maria", 28, "Dor de joelho", {10, "Ana"}};
+    Atendimento dados = {{id, "Maria", 28, "Dor de joelho"}, {10, "Ana"}};
     return dados;
 }
 
 static void conferir_atendimento(const Atendimento *dados, int id)
 {
-    assert(dados->id_paciente == id);
-    assert(strcmp(dados->nome_paciente, "Maria") == 0);
-    assert(dados->idade_paciente == 28);
-    assert(strcmp(dados->sintoma, "Dor de joelho") == 0);
+    assert(dados->paciente.id_paciente == id);
+    assert(strcmp(dados->paciente.nome, "Maria") == 0);
+    assert(dados->paciente.idade == 28);
+    assert(strcmp(dados->paciente.sintoma, "Dor de joelho") == 0);
     assert(dados->medico.id_medico == 10);
     assert(strcmp(dados->medico.nome, "Ana") == 0);
 }
@@ -162,8 +162,8 @@ static void testar_pilha(void)
 
     assert(empilhar_atendimento(&pilha, origem) == PILHA_OK);
     /* Mudar os dados de origem nao pode mudar a fotografia armazenada. */
-    origem.id_paciente = 500;
-    strcpy(origem.nome_paciente, "Alterado");
+    origem.paciente.id_paciente = 500;
+    strcpy(origem.paciente.nome, "Alterado");
     strcpy(origem.medico.nome, "Alterado");
     assert(consultar_topo(&pilha, &saida) == PILHA_OK);
     conferir_atendimento(&saida, 1);
@@ -172,7 +172,7 @@ static void testar_pilha(void)
     }
     assert(consultar_topo(&pilha, &saida) == PILHA_OK);
     conferir_atendimento(&saida, 3);
-    saida.id_paciente = 800;
+    saida.paciente.id_paciente = 800;
     assert(consultar_topo(&pilha, &saida) == PILHA_OK);
     conferir_atendimento(&saida, 3);
     arquivo = tmpfile();
@@ -205,10 +205,10 @@ static void testar_pilha(void)
     liberar_pilha(&pilha);
 
     invalido = exemplo(1);
-    memset(invalido.nome_paciente, 'X', sizeof invalido.nome_paciente);
+    memset(invalido.paciente.nome, 'X', sizeof invalido.paciente.nome);
     assert(empilhar_atendimento(&pilha, invalido) == PILHA_ARGUMENTO_INVALIDO);
     invalido = exemplo(1);
-    memset(invalido.sintoma, 'X', sizeof invalido.sintoma);
+    memset(invalido.paciente.sintoma, 'X', sizeof invalido.paciente.sintoma);
     assert(empilhar_atendimento(&pilha, invalido) == PILHA_ARGUMENTO_INVALIDO);
     invalido = exemplo(1);
     memset(invalido.medico.nome, 'X', sizeof invalido.medico.nome);
