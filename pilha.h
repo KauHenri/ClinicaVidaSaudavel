@@ -2,18 +2,13 @@
 #define PILHA_H
 
 #include "medico.h"
-
-#define ATENDIMENTO_TAMANHO_NOME_PACIENTE 50
-#define ATENDIMENTO_TAMANHO_SINTOMA 100
+#include "paciente.h"
 
 /* Fotografia do atendimento: guarda valores, sem apontar para outros TADs.
- * Os campos do paciente correspondem aos existentes em main.c. Nao define
- * outro tipo Paciente: a conversao sera feita na integracao conjunta. */
+ * Reutilizamos Paciente de paciente.h. Copiar a estrutura tambem copia seus
+ * arrays de nome e sintoma, mantendo os dados validos apos outras remocoes. */
 typedef struct {
-    int id_paciente;
-    char nome_paciente[ATENDIMENTO_TAMANHO_NOME_PACIENTE];
-    int idade_paciente;
-    char sintoma[ATENDIMENTO_TAMANHO_SINTOMA];
+    Paciente paciente;
     Medico medico;
 } Atendimento;
 

@@ -23,8 +23,8 @@ ResultadoPilha empilhar_atendimento(PilhaAtendimentos *pilha, Atendimento dados)
     NoAtendimento *novo;
 
     if (pilha == NULL ||
-        memchr(dados.nome_paciente, '\0', sizeof dados.nome_paciente) == NULL ||
-        memchr(dados.sintoma, '\0', sizeof dados.sintoma) == NULL ||
+        memchr(dados.paciente.nome, '\0', sizeof dados.paciente.nome) == NULL ||
+        memchr(dados.paciente.sintoma, '\0', sizeof dados.paciente.sintoma) == NULL ||
         memchr(dados.medico.nome, '\0', sizeof dados.medico.nome) == NULL) {
         return PILHA_ARGUMENTO_INVALIDO;
     }
@@ -97,8 +97,8 @@ void listar_atendimentos(const PilhaAtendimentos *pilha, FILE *saida)
         fprintf(saida, "%sPaciente: %d | Nome: %s | Idade: %d | "
                 "Sintoma: %s | Medico: %d | Nome: %s\n",
                 cursor == pilha->topo ? "[TOPO] " : "",
-                cursor->dados.id_paciente, cursor->dados.nome_paciente,
-                cursor->dados.idade_paciente, cursor->dados.sintoma,
+                cursor->dados.paciente.id_paciente, cursor->dados.paciente.nome,
+                cursor->dados.paciente.idade, cursor->dados.paciente.sintoma,
                 cursor->dados.medico.id_medico, cursor->dados.medico.nome);
     }
 }
