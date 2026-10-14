@@ -12,26 +12,42 @@ lista circular de médicos e pilha LIFO de atendimentos.
 - `pilha.h` e `pilha.c`: histórico com cópias de paciente e médico.
 - `clinica.h` e `clinica.c`: coordenação do atendimento e desfazimento.
 - `main.c`: menu e validação das entradas.
+- `Makefile`: compilação, execução e testes pelo comando `make`.
 - `tests/`: testes das estruturas, da integração e do menu.
 - [EXPLICACAO_ESTRUTURAS.md](EXPLICACAO_ESTRUTURAS.md): exemplos de ponteiros,
   contratos, complexidades, regras da integração e roteiro para o vídeo.
 
 ## Compilar e executar
 
-Na raiz do repositório, com GCC instalado (Clang aceita as mesmas opções):
+Na raiz do repositório, com GNU Make e GCC ou Clang disponíveis no `PATH`:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Werror main.c clinica.c paciente.c fila.c medico.c pilha.c -o clinica.exe
+make
 ```
 
-Executar no PowerShell ou no Linux/macOS:
+O **Makefile** é o arquivo de regras; **make** é a ferramenta que lê esse
+arquivo. Neste projeto, o alvo padrão compila o que mudou e abre o menu.
+Não é necessário chamar o executável pelo caminho da pasta de compilação.
 
-```sh
-./clinica.exe
-```
+| Comando | Ação |
+|---|---|
+| `make` ou `make run` | Compilar, se necessário, e abrir a clínica |
+| `make build` | Somente compilar |
+| `make test` | Executar os testes |
+| `make test-asan` | Executar os testes com AddressSanitizer |
 
-O nome `.exe` é uma convenção; o compilador gera um binário para a plataforma
-em que estiver sendo executado. O programa não precisa de bibliotecas externas.
+O Makefile prefere `gcc`, usando `clang` quando GCC não estiver disponível.
+Para escolher explicitamente: `make CC=clang` ou `make CC=gcc`.
+Cada `.c` gera um objeto `.o`; a ligação reúne os objetos em um programa.
+As dependências dos cabeçalhos também são registradas, para recompilar quando
+um `.h` mudar. Os artefatos ficam em `build/` e são ignorados pelo Git.
+
+No Windows, algumas distribuições chamam a ferramenta de `mingw32-make`.
+Nesta máquina, o comando `make` foi disponibilizado pelo GNU Make portátil.
+Depois da atualização do `PATH`, abra um novo terminal; se o editor ainda
+usar o ambiente antigo, reabra o editor. Em outro computador, instale GNU
+Make e um compilador C. O programa continua sendo C padrão, sem bibliotecas
+externas obrigatórias para sua execução.
 
 ## Usar o menu
 
@@ -55,32 +71,25 @@ histórico. Os dados ficam na memória e não são persistidos ao sair.
 
 ## Testes
 
-No Windows, com PowerShell e GCC ou Clang:
-
-```powershell
-./tests/executar.ps1 -Compilador gcc
-./tests/executar.ps1 -Compilador clang -Sanitizador
-```
-
-O script compila e executa as suítes em C, os cenários do menu e os testes de
-falha de alocação. Também gera o programa em `build/normal/clinica.exe` ou
-`build/asan/clinica.exe`. A versão normal pode ser aberta assim:
-
-```powershell
-./build/normal/clinica.exe
-```
-
-`-Compilador` aceita o caminho absoluto do executável. `-Sanitizador` requer
-suporte a AddressSanitizer. O programa não depende do script de testes para
-funcionar. Não compile os testes com `-DNDEBUG`, pois isso desativa `assert`.
-
-Para executar os testes de integração em qualquer plataforma com GCC:
+Na raiz do repositório:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I. clinica.c paciente.c fila.c medico.c pilha.c tests/test_integracao.c -o tests/test_integracao.exe
-./tests/test_integracao.exe
+make test
+make test-asan CC=clang
 ```
 
+`make test` executa as quatro suítes em C, incluindo falhas simuladas de
+alocação. No Windows, também executa os três cenários do menu pelo PowerShell.
+Em Linux/macOS, esse alvo executa as suítes em C; os cenários do menu usam
+o script PowerShell fornecido para Windows.
+
+`make test-asan` usa uma pasta separada e requer um compilador com suporte
+a AddressSanitizer. No Windows, as DLLs do ASan precisam estar disponíveis no
+`PATH` do compilador. Não use `-DNDEBUG` nos testes, pois isso desativa `assert`.
+O script anterior `tests/executar.ps1` foi preservado como alternativa técnica;
+os comandos recomendados do projeto agora são os alvos do Makefile.
+
+Os alvos de execução, compilação e testes foram verificados com GNU Make 4.4.1.
 Os testes normais e com ASan passaram no Windows com Clang 23.1.3. Foram
 verificados o fluxo completo, a preservação de dados em falhas de memória,
 todas as opções do menu, textos no limite e encerramento por EOF.

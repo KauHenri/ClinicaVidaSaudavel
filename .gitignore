@@ -4,6 +4,7 @@
 *.obj
 *.out
 *.pdb
+build/
 
 # VS Code (opcional manter configurações da equipe)
 .vscode/.browse.c_cpp.db*

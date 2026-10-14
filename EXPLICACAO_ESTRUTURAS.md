@@ -294,6 +294,12 @@ EOF encerra o programa e libera os quatro TADs, mesmo no meio de um cadastro.
 
 ## 7. Testes reproduzíveis
 
+Na raiz do projeto, `make` compila e abre o menu. `make build` apenas compila;
+`make test` executa as suítes normais e `make test-asan CC=clang` executa com
+AddressSanitizer. O arquivo `Makefile` descreve esses alvos; a ferramenta
+GNU Make decide quais objetos precisam ser recompilados pelas dependências.
+No Windows, `make test` também roda os cenários do menu pelo PowerShell.
+
 Veja os comandos no `README.md`. `tests/test_estruturas.c` verifica:
 
 - Lista vazia, primeira inserção, vários médicos e ID duplicado.
@@ -306,7 +312,7 @@ Veja os comandos no `README.md`. `tests/test_estruturas.c` verifica:
 - Histórico com conteúdo exato e manutenção do topo após listar.
 - Argumentos nulos e strings sem terminador.
 
-O script PowerShell compila também uma versão instrumentada com
+O Makefile compila também uma versão instrumentada com
 `malloc_teste` e `free_teste`, substituídos apenas nos objetos dos quatro TADs.
 Ela força falhas de alocação em estruturas vazias e ocupadas, verifica a
 recuperação e exige zero alocações pendentes ao terminar. O programa final
@@ -320,7 +326,7 @@ após excluir cadastros e médicos e falhas de alocação sem perda de dados.
 passa por todas as opções, confere as saídas em ordem, testa entradas inválidas,
 overflow numérico, textos longos, tamanhos máximos e EOF com estruturas ocupadas.
 
-O modo `-Sanitizador` executa as quatro suítes em C e os três cenários do menu
+O alvo `make test-asan` executa as quatro suítes em C e, no Windows, os três cenários do menu
 com AddressSanitizer. Todos passaram na execução normal e com ASan. A
 contabilização dos TADs complementa essa verificação: não confundir ASan
 com uma garantia de detecção automática de todos os vazamentos no Windows.
@@ -341,7 +347,8 @@ O alocador de teste terminou com zero alocações pendentes nos quatro TADs.
    Mostrar como a cópia permanece válida após excluir cadastro ou médico.
 10. No menu, cadastrar dois pacientes e dois médicos, enfileirar, atender,
     consultar histórico e desfazer. Mostrar a prioridade da fila e a rotação.
-11. Executar os testes e explicar os retornos de vazio e falha de alocação.
+11. Abrir o terminal e usar `make` para demonstrar o menu; depois usar
+    `make test` e explicar os retornos de vazio e falha de alocação.
 12. Encerrar mostrando as funções de liberação e justificando as complexidades:
     avanço O(1), inserção/remoção da lista O(n), PUSH/POP/PEEK O(1).
 
