@@ -1,17 +1,19 @@
-# Lista circular e pilha LIFO — guia de estudo
+# Estruturas da clínica — guia de estudo e integração
 
 ## 1. O que esta contribuição entrega
 
-Foram implementados somente os módulos de médicos e de atendimentos.
-O repositório de origem tinha `main.c`, `.gitignore` e configurações do VS Code;
-não tinha `tipos.h`, `paciente.h`, `paciente.c`, `fila.h` ou `fila.c`.
-O `main.c` já contém um `Paciente` com `id_paciente`, `nome[50]`, `idade` e
-`sintoma[100]`, além de um nó inicial do cadastro. Esse arquivo foi preservado.
+O projeto agora reúne os quatro módulos: lista simples de pacientes, fila FIFO,
+lista circular de médicos e pilha LIFO de atendimentos. Os arquivos de pacientes
+e fila vieram da branch do colega e foram mantidos sem alterações.
 
-Não criamos outro tipo chamado `Paciente` nem um contrato definitivo para a
-fila. `Atendimento`, em `pilha.h`, guarda uma fotografia dos dados existentes
-do paciente e uma cópia de `Medico`. Isso basta para consultar o histórico e
-recuperar os dados no desfazimento sem depender de endereços de outras listas.
+`Paciente` é definido somente em `paciente.h`, com `id_paciente`, `nome[50]`,
+`idade` e `sintoma[100]`. `Atendimento`, em `pilha.h`, contém um `Paciente`
+e um `Medico`, ambos por valor. Assim não há ponteiros frágeis para outros nós
+nem uma segunda definição de paciente.
+
+`main.c` contém o menu e a leitura de dados. `clinica.h` e `clinica.c` agrupam
+os quatro TADs e coordenam fila, escala e histórico nas operações de atender
+e desfazer. Esse agrupamento não cria novos nós nem substitui qualquer TAD.
 
 ## 2. Como usar os TADs
 
@@ -35,7 +37,7 @@ liberar_pilha(&historico);
 liberar_medicos(&escala);
 ```
 
-Esse trecho exemplifica chamadas para o futuro menu; não é um novo `main.c`.
+Esse trecho exemplifica chamadas aos TADs; o menu completo está em `main.c`.
 Inicializar define o ponteiro como `NULL`. Inicialize uma vez e use a liberação
 antes de reutilizar uma estrutura ocupada: reinicializar sem liberar perderia
 os endereços dos nós.
@@ -44,7 +46,9 @@ Os nós são privados nos arquivos `.c`. Os cabeçalhos expõem apenas os dados,
 um ponteiro para tipo incompleto e as operações. O menu deve usar as funções,
 sem manipular `atual` ou `topo`. Não copie um TAD ocupado por atribuição: duas
 estruturas passariam a compartilhar os mesmos nós e poderiam liberar a mesma
-memória duas vezes. Já `Medico` e `Atendimento` podem ser copiados normalmente.
+memória duas vezes. Essa restrição também vale para `Clinica`. Já `Paciente`,
+`Medico` e `Atendimento` podem ser copiados normalmente, pois seus campos
+de texto são arrays dentro da própria estrutura.
 
 ## 3. Lista simplesmente encadeada circular
 
@@ -74,8 +78,8 @@ atual
 
 Antes da alocação, uma volta completa procura IDs duplicados. Depois do
 `malloc`, verificamos se o endereço é `NULL`. Se faltar memória, os enlaces
-antigos continuam intactos. IDs são inteiros e precisam ser únicos na escala;
-não impomos uma faixa positiva que ainda não foi combinada pela equipe.
+antigos continuam intactos. IDs são inteiros e precisam ser únicos na escala.
+O TAD aceita inteiros; o menu usa IDs positivos para facilitar o cadastro.
 
 `malloc(sizeof *novo)` reserva espaço para o nó inteiro. `sizeof *novo` mede
 o tipo do objeto apontado, sem precisar acessar um nó já existente; `novo`
@@ -136,6 +140,19 @@ Cada `NoAtendimento` guarda `Atendimento dados` e um ponteiro `prox` para o
 atendimento anterior. `PilhaAtendimentos.topo` aponta para o mais recente.
 O último nó no percurso, que é o registro mais antigo, aponta para `NULL`.
 
+O registro reutiliza os tipos públicos:
+
+```c
+typedef struct {
+    Paciente paciente;
+    Medico medico;
+} Atendimento;
+```
+
+Por exemplo, o ID fica em `registro.paciente.id_paciente`. A atribuição de
+um `Paciente` também copia nome e sintoma. Remover o cadastro ou o médico
+não apaga a fotografia já guardada no histórico.
+
 ### PUSH e POP, passo a passo
 
 ```text
@@ -185,7 +202,8 @@ as cópias têm tamanho fixo. A pilha ocupa O(n) e usa O(1) de espaço auxiliar.
 - Todo `malloc` tem retorno conferido e todo nó removido é liberado.
 - As strings devem conter `\0` dentro dos arrays: 50 bytes para nomes e
   100 para sintoma, incluindo o terminador. Entradas sem terminador são
-  rejeitadas antes da inserção. Isso evita leituras além do array ao listar.
+  rejeitadas pelos módulos de médicos e pilha antes da inserção. O menu
+  também limita os textos antes de chamar o cadastro de pacientes.
 - Os códigos `MEDICO_OK` e `PILHA_OK` valem zero: compare com o nome do código,
   sem tratar retorno como um booleano de sucesso.
 - Os demais retornos distinguem vazio, falta de memória, argumentos inválidos
@@ -196,62 +214,83 @@ as cópias têm tamanho fixo. A pilha ocupa O(n) e usa O(1) de espaço auxiliar.
 - Ponteiros para os TADs precisam apontar para estruturas inicializadas.
   Aceitar `NULL` não torna válido um ponteiro não inicializado ou já liberado.
 
-## 6. Como integrar com o cadastro e a fila
+## 6. Integração com o cadastro e a fila
 
-Ainda é necessário combinar as interfaces dos módulos do colega e fazer o
-menu em conjunto. Nenhuma fila foi implementada nesta contribuição.
+`Clinica` reúne `pacientes`, `fila`, `medicos` e `historico`. Inicializar e
+liberar esse agrupamento chama as quatro funções de inicialização/liberação.
+As operações do menu usam as interfaces públicas, sem acessar os nós.
 
-Com o `Paciente` atual do `main.c`, a fotografia pode ser montada assim:
+`colocar_paciente_na_fila` busca um ID no cadastro e passa a cópia encontrada
+para `enfileirar_paciente`. Se o ID não existir ou faltar memória, a fila não muda.
 
-```c
-/* p e uma copia valida do paciente e medico foi obtido pela consulta. */
-Atendimento registro;
-registro.id_paciente = p.id_paciente;
-memcpy(registro.nome_paciente, p.nome, sizeof registro.nome_paciente);
-registro.idade_paciente = p.idade;
-memcpy(registro.sintoma, p.sintoma, sizeof registro.sintoma);
-registro.medico = medico;
+### Atendimento com preservação de dados
+
+`atender_proximo_paciente`, em `clinica.c`, segue esta ordem:
+
+1. Consultar o paciente na frente, sem retirá-lo.
+2. Consultar o médico atual. Sem médico, o paciente continua aguardando.
+3. Copiar ambos para um `Atendimento` e executar PUSH.
+4. Somente após o PUSH funcionar, retirar o paciente da fila.
+5. Avançar o médico e devolver o registro ao chamador para exibir na tela.
+
+O PUSH é a única etapa desse fluxo que aloca. Se faltar memória, fila, escala
+e histórico continuam como estavam. A retirada e o avanço não alocam.
+Existe uma proteção que desfaz o PUSH se a retirada falhar inesperadamente.
+O programa é sequencial: não há outro atendimento alterando os TADs entre
+essas chamadas.
+
+### Desfazimento com preservação de dados
+
+`desfazer_ultimo_atendimento` segue esta ordem:
+
+1. Executar PEEK para consultar o último registro sem removê-lo.
+2. Chamar `devolver_inicio_fila` com `registro.paciente`.
+3. Somente após a devolução funcionar, executar POP e entregar a cópia ao menu.
+
+Se a alocação do nó da fila falhar, o registro continua na pilha e pode ser
+usado numa nova tentativa. POP não aloca memória. Se houver uma falha
+inesperada no POP, a entrada recém-devolvida é retirada para restaurar a fila.
+
+Exemplo com pacientes P1, P2, P3 e médicos Ana e Bruno:
+
+```text
+Inicial:       fila P1 -> P2 -> P3; atual Ana; historico vazio
+Atender P1:    fila P2 -> P3; atual Bruno; topo P1/Ana
+Atender P2:    fila P3; atual Ana; topo P2/Bruno -> P1/Ana
+Desfazer P2:   fila P2 -> P3; atual Ana; topo P1/Ana
+Atender P2:    fila P3; atual Bruno; topo P2/Ana -> P1/Ana
 ```
 
-Esse exemplo requer `<string.h>` e os mesmos tamanhos de campos do código
-atual. Não é uma função pronta do cadastro nem deve ser incluído fora de um
-contexto em que `p` e `medico` estejam definidos. Para reconstruir o paciente,
-copie os quatro campos de volta ao tipo usado pelo módulo de fila.
+### Regras usadas nesta versão
 
-Para um atendimento normal, o fluxo sugerido é:
+- O médico avança automaticamente depois de um atendimento concluído.
+- Desfazer devolve o paciente ao início da fila e mantém a posição atual da
+  escala. Não tenta restaurar um médico que pode ter sido removido.
+- Cada entrada da fila representa uma solicitação. A FIFO do colega permite
+  várias entradas do mesmo ID; o menu mantém esse contrato. IDs no cadastro
+  e na escala continuam únicos.
+- Remover do cadastro não remove cópias que já estejam na fila ou no histórico.
+  Desfazer restaura a entrada de espera, sem recriar automaticamente o cadastro.
+- Todos os dados ficam na memória da execução e são liberados ao sair.
 
-1. Verificar médico atual e paciente na frente da fila.
-2. Montar o registro e tentar empilhá-lo.
-3. Somente após o PUSH bem-sucedido, retirar o paciente da fila.
-4. Se a retirada falhar, remover o registro recém-empilhado para restaurar
-   a consistência. Avançar o médico somente após concluir o atendimento.
+| Operação de integração | Custo |
+|---|---|
+| `inicializar_clinica` | O(1) |
+| `colocar_paciente_na_fila` | O(p), devido à busca no cadastro |
+| `atender_proximo_paciente` | O(1) |
+| `desfazer_ultimo_atendimento` | O(1) |
+| `liberar_clinica` | O(p + f + m + a) |
 
-Isso depende de a fila permitir consultar a frente sem remover. Se o módulo
-do colega só permitir retirar, será necessário combinar uma restauração
-segura em caso de falha do PUSH. Não se deve perder o paciente nem criar
-histórico de um atendimento que não foi concluído.
+`p`, `f`, `m` e `a` são as quantidades de pacientes cadastrados, entradas
+da fila, médicos e atendimentos. O agrupamento usa espaço auxiliar O(1).
 
-Para desfazer, a sequência recomendada é:
+### Leitura no menu
 
-1. Usar PEEK para copiar o último atendimento sem removê-lo.
-2. Reconstruir o paciente e tentar devolvê-lo ao início da fila.
-3. Só depois de a reinserção funcionar, executar POP.
-
-Assim uma falha de alocação na fila não elimina o registro necessário para
-repetir o desfazimento. Com uma pilha inicializada, saída válida e sem mudanças
-entre essas chamadas, POP não aloca memória e remove o mesmo registro consultado.
-
-Decisões pendentes para a equipe:
-
-- A fila terá uma operação para devolver ao início? Essa é a política sugerida
-  para preservar a prioridade anterior. Não simulem uma segunda fila.
-- O desfazimento também deve restaurar o médico anterior da rotação? Os módulos
-  atuais não desfazem o avanço; decidam isso em conjunto no menu.
-- O que fazer se o cadastro permanente do paciente foi removido após atender?
-  A fotografia recupera os dados, mas a regra do cadastro precisa ser combinada.
-- Como evitar duplicar na fila um paciente cujo atendimento está sendo desfeito?
-- Quando modularizarem `Paciente`, podem movê-lo para um cabeçalho compartilhado
-  e adaptar o histórico conjuntamente. Nenhum `tipos.h` provisório foi imposto.
+O menu usa `fgets` para nomes, sintomas e números. `strtol` verifica se o
+número inteiro foi lido por completo e cabe no intervalo permitido.
+Uma linha longa é descartada e solicitada novamente, sem contaminar a próxima
+pergunta. Campos vazios são rejeitados; espaços nas extremidades são retirados.
+EOF encerra o programa e libera os quatro TADs, mesmo no meio de um cadastro.
 
 ## 7. Testes reproduzíveis
 
@@ -268,15 +307,24 @@ Veja os comandos no `README.md`. `tests/test_estruturas.c` verifica:
 - Argumentos nulos e strings sem terminador.
 
 O script PowerShell compila também uma versão instrumentada com
-`malloc_teste` e `free_teste`, substituídos apenas nos objetos dos dois TADs.
+`malloc_teste` e `free_teste`, substituídos apenas nos objetos dos quatro TADs.
 Ela força falhas de alocação em estruturas vazias e ocupadas, verifica a
 recuperação e exige zero alocações pendentes ao terminar. O programa final
 continua usando `malloc` e `free` da biblioteca padrão.
 
-O modo `-Sanitizador` executa ambas as versões com AddressSanitizer. A
+`tests/test_integracao.c` verifica cadastro, busca, remoções, ordem FIFO,
+devolução ao início, atendimento com rotação, vários desfazimentos, cópias
+após excluir cadastros e médicos e falhas de alocação sem perda de dados.
+
+`tests/test_menu.ps1` executa o programa com entradas fornecidas por um script:
+passa por todas as opções, confere as saídas em ordem, testa entradas inválidas,
+overflow numérico, textos longos, tamanhos máximos e EOF com estruturas ocupadas.
+
+O modo `-Sanitizador` executa as quatro suítes em C e os três cenários do menu
+com AddressSanitizer. Todos passaram na execução normal e com ASan. A
 contabilização dos TADs complementa essa verificação: não confundir ASan
 com uma garantia de detecção automática de todos os vazamentos no Windows.
-Os testes não executam o `main.c` original nem validam os futuros módulos de fila.
+O alocador de teste terminou com zero alocações pendentes nos quatro TADs.
 
 ## 8. Roteiro técnico para o vídeo
 
@@ -289,10 +337,12 @@ Os testes não executam o `main.c` original nem validam os futuros módulos de f
    depois mostrar a remoção do único nó.
 7. Abrir `pilha.h` e `pilha.c`: explicar a fotografia do atendimento e o topo.
 8. Fazer PUSH de A, B e C; demonstrar PEEK e POP devolvendo C, B e A.
-9. Mostrar por que a cópia retornada continua válida após `free` e como isso
-   prepara o desfazimento, respeitando uma eventual falha de reinserção na fila.
-10. Executar os testes e explicar os retornos de vazio e falha de alocação.
-11. Encerrar mostrando as funções de liberação e justificando as complexidades:
+9. Abrir `clinica.c`: explicar PUSH antes da retirada e devolução antes do POP.
+   Mostrar como a cópia permanece válida após excluir cadastro ou médico.
+10. No menu, cadastrar dois pacientes e dois médicos, enfileirar, atender,
+    consultar histórico e desfazer. Mostrar a prioridade da fila e a rotação.
+11. Executar os testes e explicar os retornos de vazio e falha de alocação.
+12. Encerrar mostrando as funções de liberação e justificando as complexidades:
     avanço O(1), inserção/remoção da lista O(n), PUSH/POP/PEEK O(1).
 
 Para estudar, tentem desenhar os ponteiros antes e depois de cada operação
