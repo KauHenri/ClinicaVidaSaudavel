@@ -1,105 +1,177 @@
 # Clínica VidaSaudável
 
-Projeto acadêmico de Estruturas de Dados em C, da UFU. Os quatro módulos estão
-integrados em um menu de terminal: lista simples de pacientes, fila FIFO,
-lista circular de médicos e pilha LIFO de atendimentos.
+Sistema de atendimento de uma clínica desenvolvido em **C**, como atividade da
+disciplina de **Estruturas de Dados** do curso de Engenharia de Computação da
+**Universidade Federal de Uberlândia (UFU)**.
 
-## Organização
+O projeto integra quatro tipos abstratos de dados em um menu de terminal:
+lista encadeada simples de pacientes, fila de espera FIFO, lista circular de
+médicos e pilha LIFO de atendimentos. A implementação utiliza ponteiros,
+alocação dinâmica e módulos separados em arquivos `.h` e `.c`.
 
-- `paciente.h` e `paciente.c`: cadastro de pacientes em lista simples.
-- `fila.h` e `fila.c`: espera FIFO por ordem de chegada.
-- `medico.h` e `medico.c`: escala circular e médico atual.
-- `pilha.h` e `pilha.c`: histórico com cópias de paciente e médico.
-- `clinica.h` e `clinica.c`: funções de apoio para integração, mantidas nos testes.
-- `main.c`: menu do colega, chamadas diretas aos TADs e validação das entradas.
-- `Makefile`: compilação, execução e testes pelo comando `make`.
-- `tests/`: testes das estruturas, da integração e do menu.
-- [EXPLICACAO_ESTRUTURAS.md](EXPLICACAO_ESTRUTURAS.md): exemplos de ponteiros,
-  contratos, complexidades, regras da integração e roteiro para o vídeo.
+[Versão final v1.0.0](https://github.com/KauHenri/ClinicaVidaSaudavel/releases/tag/v1.0.0)
 
-## Compilar e executar
+## Estruturas de dados
 
-Na raiz do repositório, com GNU Make e GCC ou Clang disponíveis no `PATH`:
+| Estrutura | Responsabilidade | Operações principais |
+|---|---|---|
+| Lista encadeada simples | Cadastro de pacientes | Inserção, busca por ID, remoção e listagem |
+| Fila FIFO | Sala de espera por ordem de chegada | Enfileirar, consultar a frente, desenfileirar e devolver ao início |
+| Lista circular | Escala rotativa de médicos | Inserção, consulta do atual, avanço, remoção do atual e listagem |
+| Pilha LIFO | Histórico de atendimentos | Empilhar, consultar o topo, desempilhar e listar |
+
+Na fila, o primeiro paciente a entrar é o primeiro a ser atendido. Na escala,
+o último médico aponta novamente para o primeiro, permitindo o rodízio.
+No histórico, o atendimento mais recente fica no topo e é o primeiro a ser
+desfeito.
+
+## Compilação e execução
+
+É necessário ter **GNU Make** e um compilador **GCC ou Clang** disponíveis no
+`PATH`. O código utiliza o padrão C11 e a biblioteca padrão de C.
+
+Na pasta do projeto, execute:
 
 ```sh
 make
 ```
 
-O **Makefile** é o arquivo de regras; **make** é a ferramenta que lê esse
-arquivo. Neste projeto, o alvo padrão compila o que mudou e abre o menu.
-Não é necessário chamar o executável pelo caminho da pasta de compilação.
+O alvo padrão compila os arquivos necessários e abre o menu da clínica.
 
 | Comando | Ação |
 |---|---|
-| `make` ou `make run` | Compilar, se necessário, e abrir a clínica |
+| `make` ou `make run` | Compilar e executar |
 | `make build` | Somente compilar |
 | `make test` | Executar os testes |
-| `make test-asan` | Executar os testes com AddressSanitizer |
+| `make test-asan CC=clang` | Executar os testes com AddressSanitizer |
 
-O Makefile prefere `gcc`, usando `clang` quando GCC não estiver disponível.
-Para escolher explicitamente: `make CC=clang` ou `make CC=gcc`.
-Cada `.c` gera um objeto `.o`; a ligação reúne os objetos em um programa.
-As dependências dos cabeçalhos também são registradas, para recompilar quando
-um `.h` mudar. Os artefatos ficam em `build/` e são ignorados pelo Git.
+O compilador pode ser escolhido com `make CC=gcc` ou `make CC=clang`.
+No Windows, a ferramenta também pode estar disponível como `mingw32-make`.
+Os arquivos gerados ficam em `build/`, diretório ignorado pelo Git.
 
-No Windows, algumas distribuições chamam a ferramenta de `mingw32-make`.
-Nesta máquina, o comando `make` foi disponibilizado pelo GNU Make portátil.
-Depois da atualização do `PATH`, abra um novo terminal; se o editor ainda
-usar o ambiente antigo, reabra o editor. Em outro computador, instale GNU
-Make e um compilador C. O programa continua sendo C padrão, sem bibliotecas
-externas obrigatórias para sua execução.
+## Utilização
 
-## Usar o menu
+Ao iniciar, o programa apresenta a pergunta:
 
-Ao iniciar, escolha `1` para carregar dois pacientes e dois médicos de exemplo,
-ou `0` para começar com as estruturas vazias.
+```text
+Carregar dados de exemplo? (1 - Sim / 0 - Nao):
+```
 
-1. Cadastrar paciente (opção 1) e médico (3). Após cadastrar o paciente, o menu
-   pergunta se ele já deve ser colocado na fila.
-2. Encaminhar um paciente já cadastrado à fila pelo ID (2).
-3. Atender o primeiro paciente (4); o médico avança automaticamente.
-4. Listar o histórico (9), do atendimento mais recente ao mais antigo.
-5. Desfazer (5): o paciente volta ao início da fila. A escala médica mantém
-   sua posição atual.
-6. Sair (0): todas as estruturas são liberadas.
+- **Opção 0:** inicia com as estruturas vazias, permitindo cadastrar pacientes
+  e médicos manualmente.
+- **Opção 1:** carrega os pacientes Maria Silva e João Souza, já enfileirados,
+  e os médicos Dr. Carlos e Dra. Beatriz para demonstração do atendimento.
 
-As outras opções são passar o plantão manualmente (6), exibir a fila (7),
-exibir a escala (8) e listar o cadastro (10). Busca e remoção de pacientes,
-remoção de médicos e consulta ao topo continuam disponíveis nos TADs e nos
-testes, embora não tenham opções próprias neste menu. IDs no menu são positivos;
-idade aceita inteiros não negativos. Nomes aceitam até 49 bytes e sintomas
-até 99 bytes, reservando espaço para o terminador. Campos vazios e entradas
-fora dos limites são solicitados novamente.
+### Opções do menu
 
-Cada entrada na fila é uma solicitação; um paciente pode ter várias entradas,
-conforme o contrato da FIFO. Remover o cadastro não apaga cópias da fila ou do
-histórico. Os dados ficam na memória e não são persistidos ao sair.
+| Opção | Operação |
+|---|---|
+| 1 | Cadastrar paciente e escolher se ele deve entrar na fila |
+| 2 | Colocar um paciente cadastrado na fila pelo ID |
+| 3 | Cadastrar médico no plantão |
+| 4 | Realizar o próximo atendimento |
+| 5 | Desfazer o último atendimento |
+| 6 | Avançar o plantão manualmente |
+| 7 | Mostrar a fila de espera |
+| 8 | Mostrar a escala de médicos |
+| 9 | Mostrar o histórico de atendimentos |
+| 10 | Mostrar todos os pacientes cadastrados |
+| 0 | Encerrar e liberar a memória |
+
+As operações de busca e remoção do cadastro, remoção do médico atual e
+consulta ao topo também estão disponíveis nas interfaces dos TADs e são
+verificadas pelos testes.
+
+### Fluxo de atendimento
+
+1. Cadastrar os pacientes e os médicos.
+2. Encaminhar os pacientes à fila de espera.
+3. Consultar o primeiro paciente e o médico atual.
+4. Registrar o atendimento na pilha antes de retirar o paciente da fila.
+5. Retirar o paciente atendido e avançar para o próximo médico.
+6. Ao desfazer, devolver o paciente ao início da fila e remover o registro
+   correspondente do topo da pilha.
+
+A ordem das operações preserva os dados caso falte memória para registrar
+um atendimento ou devolver um paciente à fila. No desfazimento, a escala
+médica mantém sua posição atual.
+
+### Regras e validações
+
+- IDs de pacientes e médicos são únicos em seus respectivos cadastros.
+- O menu aceita IDs positivos e idades inteiras não negativas.
+- Nomes aceitam até 49 bytes e sintomas até 99 bytes, reservando espaço para
+  o terminador da string. Campos vazios, textos longos e números inválidos
+  são solicitados novamente.
+- Cada entrada na fila representa uma solicitação de atendimento; um mesmo
+  paciente pode ter mais de uma solicitação.
+- O atendimento mantém o paciente no cadastro. A fila e o histórico guardam
+  cópias dos dados, independentes dos nós do cadastro e da escala.
+- Os dados permanecem em memória durante a execução. Ao sair, todos os nós
+  são liberados.
+
+## Demonstrações em vídeo
+
+As gravações em MP4 estão disponíveis nos anexos da
+[versão final](https://github.com/KauHenri/ClinicaVidaSaudavel/releases/tag/v1.0.0).
+
+### Caso 01: início com estruturas vazias
+
+Demonstração iniciada com a **opção 0** na pergunta sobre os dados de exemplo.
+Apresenta a utilização do sistema a partir do cadastro manual dos dados.
+
+[Abrir CASO01.mp4](https://github.com/KauHenri/ClinicaVidaSaudavel/releases/download/v1.0.0/CASO01.mp4)
+
+### Caso 02: início com dados de exemplo
+
+Demonstração iniciada com a **opção 1**, utilizando os pacientes e médicos
+carregados pelo programa para apresentar o fluxo de atendimento, a rotação
+da escala e o desfazimento pelo histórico.
+
+[Abrir CASO02.mp4](https://github.com/KauHenri/ClinicaVidaSaudavel/releases/download/v1.0.0/CASO02.mp4)
+
+## Organização dos arquivos
+
+| Arquivo ou diretório | Conteúdo |
+|---|---|
+| `main.c` | Menu, leitura das entradas e chamadas aos TADs |
+| `paciente.h` e `paciente.c` | Lista encadeada de pacientes |
+| `fila.h` e `fila.c` | Fila de espera FIFO |
+| `medico.h` e `medico.c` | Lista circular de médicos |
+| `pilha.h` e `pilha.c` | Pilha de atendimentos |
+| `clinica.h` e `clinica.c` | Funções de integração utilizadas nos testes |
+| `Makefile` | Regras de compilação, execução e testes |
+| `tests/` | Testes das estruturas, integração, menu e falhas de alocação |
 
 ## Testes
-
-Na raiz do repositório:
 
 ```sh
 make test
 make test-asan CC=clang
 ```
 
-`make test` executa as quatro suítes em C, incluindo falhas simuladas de
-alocação. No Windows, também executa os cenários do menu pelo PowerShell.
-Em Linux/macOS, esse alvo executa as suítes em C; os cenários do menu usam
-o script PowerShell fornecido para Windows.
+Os testes verificam inserções, buscas, remoções, circularidade, ordem FIFO,
+ordem LIFO, cópias dos dados e integração dos atendimentos. Também cobrem
+estruturas vazias e falhas simuladas de alocação, verificando a preservação
+do estado e a liberação dos nós.
 
-`make test-asan` usa uma pasta separada e requer um compilador com suporte
-a AddressSanitizer. No Windows, as DLLs do ASan precisam estar disponíveis no
-`PATH` do compilador. Não use `-DNDEBUG` nos testes, pois isso desativa `assert`.
-O script anterior `tests/executar.ps1` foi preservado como alternativa técnica;
-os comandos recomendados do projeto agora são os alvos do Makefile.
+No Windows, `make test` executa ainda os cenários do menu por PowerShell,
+incluindo entradas inválidas, limites de texto e encerramento por fim da
+entrada (EOF). Em Linux e macOS, o alvo executa as suítes em C.
 
-Os alvos de execução, compilação e testes foram verificados com GNU Make 4.4.1.
-Os testes normais e com ASan passaram no Windows com Clang 23.1.3. Foram
-verificados o fluxo completo, a preservação de dados em falhas de memória,
-todas as opções do menu, textos no limite e encerramento por EOF.
+A execução com AddressSanitizer requer um compilador compatível e suas
+bibliotecas de execução disponíveis no ambiente. Os testes utilizam `assert`
+e devem ser compilados com as asserções habilitadas.
 
-No VS Code, a tarefa padrão **Compilar Clinica** chama `make build` para compilar
-todos os módulos. A tarefa **Executar Clinica** chama `make run`. As tarefas
-não dependem de um caminho particular de compilador no computador do colega.
+## Complexidade das operações
+
+| Estrutura | Operação | Custo |
+|---|---|---|
+| Lista de pacientes | Inserir, buscar ou remover por ID | O(n) |
+| Fila | Enfileirar, desenfileirar, consultar a frente ou devolver ao início | O(1) |
+| Lista circular | Avançar ou consultar o médico atual | O(1) |
+| Lista circular | Inserir ou remover o médico atual | O(n) |
+| Pilha | Empilhar, desempilhar ou consultar o topo | O(1) |
+| Todas | Listar ou liberar todos os nós | O(n) |
+
+Em cada linha, `n` representa a quantidade de nós da estrutura correspondente.
