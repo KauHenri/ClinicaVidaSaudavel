@@ -6,8 +6,8 @@ lista circular de médicos e pilha LIFO de atendimentos.
 
 ## Organização
 
-- `paciente.h` e `paciente.c`: cadastro do colega, mantido sem alterações.
-- `fila.h` e `fila.c`: espera FIFO do colega, mantida sem alterações.
+- `paciente.h` e `paciente.c`: cadastro de pacientes em lista simples.
+- `fila.h` e `fila.c`: espera FIFO por ordem de chegada.
 - `medico.h` e `medico.c`: escala circular e médico atual.
 - `pilha.h` e `pilha.c`: histórico com cópias de paciente e médico.
 - `clinica.h` e `clinica.c`: funções de apoio para integração, mantidas nos testes.
@@ -51,7 +51,7 @@ externas obrigatórias para sua execução.
 
 ## Usar o menu
 
-Ao iniciar, escolha `1` para carregar três pacientes e três médicos de exemplo,
+Ao iniciar, escolha `1` para carregar dois pacientes e dois médicos de exemplo,
 ou `0` para começar com as estruturas vazias.
 
 1. Cadastrar paciente (opção 1) e médico (3). Após cadastrar o paciente, o menu

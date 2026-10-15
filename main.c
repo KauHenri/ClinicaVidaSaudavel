@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "paciente.h"
 #include "fila.h"
@@ -8,54 +11,84 @@
 #include "pilha.h"
 
 // funcoes auxiliares para ler dados do teclado sem travar o buffer
-void ler_texto(char *buffer, int tamanho) {
-    if (fgets(buffer, tamanho, stdin) != NULL) {
-        // remove o \n do final da string se existir
+int ler_texto(char *buffer, int tamanho) {
+    while (fgets(buffer, tamanho, stdin) != NULL) {
         size_t len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n') {
-            buffer[len - 1] = '\0';
+            buffer[--len] = '\0';
+        } else {
+            int extra = getchar();
+            if (extra != '\n' && extra != EOF) {
+                while ((extra = getchar()) != '\n' && extra != EOF) {}
+                printf("Texto muito longo. Digite novamente: ");
+                continue;
+            }
         }
+        while (len > 0 && isspace((unsigned char)buffer[len - 1])) {
+            buffer[--len] = '\0';
+        }
+        size_t inicio = 0;
+        while (isspace((unsigned char)buffer[inicio])) {
+            inicio++;
+        }
+        memmove(buffer, buffer + inicio, strlen(buffer + inicio) + 1);
+        if (buffer[0] != '\0') {
+            return 1;
+        }
+        printf("O campo nao pode ficar vazio. Digite novamente: ");
     }
+    buffer[0] = '\0';
+    return 0;
 }
 
-int ler_inteiro(const char *msg) {
+int ler_inteiro(const char *msg, int minimo, int maximo) {
     char linha[64];
-    int valor;
 
     printf("%s", msg);
-    if (fgets(linha, sizeof(linha), stdin) != NULL) {
-        if (sscanf(linha, "%d", &valor) == 1) {
-            return valor;
+    while (ler_texto(linha, sizeof(linha))) {
+        char *fim;
+        errno = 0;
+        long valor = strtol(linha, &fim, 10);
+        if (errno != ERANGE && fim != linha && *fim == '\0' &&
+            valor >= minimo && valor <= maximo) {
+            return (int)valor;
         }
+        printf("Entrada invalida! Digite um inteiro entre %d e %d: ", minimo, maximo);
     }
-    return -1; // valor invalido
+    return -1; // fim da entrada
 }
 
 // 1. Cadastra um novo paciente na lista encadeada
 void acao_cadastrar_paciente(ListaPacientes *cadastro, FilaPacientes *fila) {
-    Paciente p;
+    Paciente p = {0};
 
     printf("\n--- Novo Paciente ---\n");
-    p.id_paciente = ler_inteiro("Digite o ID: ");
-    if (p.id_paciente <= 0) {
-        printf("ID invalido!\n");
+    p.id_paciente = ler_inteiro("Digite o ID: ", 1, INT_MAX);
+    if (p.id_paciente == -1) {
         return;
     }
 
     printf("Nome: ");
-    ler_texto(p.nome, PACIENTE_TAMANHO_NOME);
+    if (!ler_texto(p.nome, PACIENTE_TAMANHO_NOME)) {
+        return;
+    }
 
-    p.idade = ler_inteiro("Idade: ");
+    p.idade = ler_inteiro("Idade: ", 0, INT_MAX);
+    if (p.idade == -1) {
+        return;
+    }
 
     printf("Sintoma: ");
-    ler_texto(p.sintoma, PACIENTE_TAMANHO_SINTOMA);
+    if (!ler_texto(p.sintoma, PACIENTE_TAMANHO_SINTOMA)) {
+        return;
+    }
 
     ResultadoPaciente res = inserir_paciente(cadastro, p);
 
     if (res == PACIENTE_OK) {
         printf("Paciente cadastrado com sucesso!\n");
 
-        int enviar = ler_inteiro("Deseja colocar na fila de espera agora? (1 - Sim / 0 - Nao): ");
+        int enviar = ler_inteiro("Deseja colocar na fila de espera agora? (1 - Sim / 0 - Nao): ", 0, 1);
         if (enviar == 1) {
             if (enfileirar_paciente(fila, p) == FILA_OK) {
                 printf("Paciente adicionado na fila de espera!\n");
@@ -75,7 +108,10 @@ void acao_cadastrar_paciente(ListaPacientes *cadastro, FilaPacientes *fila) {
 // 2. Encaminha um paciente ja cadastrado para a fila
 void acao_enfileirar_paciente(const ListaPacientes *cadastro, FilaPacientes *fila) {
     printf("\n--- Encaminhar para Sala de Espera ---\n");
-    int id = ler_inteiro("Digite o ID do paciente: ");
+    int id = ler_inteiro("Digite o ID do paciente: ", 1, INT_MAX);
+    if (id == -1) {
+        return;
+    }
 
     Paciente p;
     if (buscar_paciente_por_id(cadastro, id, &p) != PACIENTE_OK) {
@@ -92,17 +128,18 @@ void acao_enfileirar_paciente(const ListaPacientes *cadastro, FilaPacientes *fil
 
 // 3. Cadastra medico na lista circular
 void acao_cadastrar_medico(ListaMedicos *escala) {
-    Medico m;
+    Medico m = {0};
 
     printf("\n--- Cadastrar Medico ---\n");
-    m.id_medico = ler_inteiro("CRM / ID do medico: ");
-    if (m.id_medico <= 0) {
-        printf("ID invalido!\n");
+    m.id_medico = ler_inteiro("CRM / ID do medico: ", 1, INT_MAX);
+    if (m.id_medico == -1) {
         return;
     }
 
     printf("Nome do medico: ");
-    ler_texto(m.nome, MEDICO_TAMANHO_NOME);
+    if (!ler_texto(m.nome, MEDICO_TAMANHO_NOME)) {
+        return;
+    }
 
     ResultadoMedico res = inserir_medico(escala, m);
     if (res == MEDICO_OK) {
@@ -220,7 +257,7 @@ int main(void) {
     printf("        Clinica Vida Saudavel             \n");
     printf("===========================================\n");
 
-    int teste = ler_inteiro("Carregar dados de exemplo? (1 - Sim / 0 - Nao): ");
+    int teste = ler_inteiro("Carregar dados de exemplo? (1 - Sim / 0 - Nao): ", 0, 1);
     if (teste == 1) {
         carregar_dados_exemplo(&cadastro, &escala_medicos, &fila_espera);
     }
@@ -228,6 +265,9 @@ int main(void) {
     int opcao = -1;
 
     do {
+        if (feof(stdin) || ferror(stdin)) {
+            break;
+        }
         printf("\n------------- MENU -------------\n");
         printf("1. Cadastrar paciente\n");
         printf("2. Colocar paciente na fila de espera\n");
@@ -242,7 +282,10 @@ int main(void) {
         printf("0. Sair\n");
         printf("--------------------------------\n");
 
-        opcao = ler_inteiro("Escolha uma opcao: ");
+        opcao = ler_inteiro("Escolha uma opcao: ", 0, 10);
+        if (opcao == -1) {
+            break;
+        }
 
         switch (opcao) {
             case 1:

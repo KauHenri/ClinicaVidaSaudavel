@@ -296,7 +296,7 @@ pergunta. Campos vazios são rejeitados; espaços nas extremidades são retirado
 EOF encerra o programa e libera os quatro TADs, mesmo no meio de um cadastro.
 Antes de inserir um paciente ou médico, o menu confere se a entrada terminou,
 evitando cadastros incompletos. O início oferece dados de exemplo para facilitar
-a demonstração: pacientes 101, 102 e 103, e médicos 1, 2 e 3.
+a demonstração: pacientes 101 e 102, e médicos 1 e 2.
 
 ## 7. Testes reproduzíveis
 
