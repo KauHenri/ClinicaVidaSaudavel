@@ -10,8 +10,8 @@ lista circular de médicos e pilha LIFO de atendimentos.
 - `fila.h` e `fila.c`: espera FIFO do colega, mantida sem alterações.
 - `medico.h` e `medico.c`: escala circular e médico atual.
 - `pilha.h` e `pilha.c`: histórico com cópias de paciente e médico.
-- `clinica.h` e `clinica.c`: coordenação do atendimento e desfazimento.
-- `main.c`: menu e validação das entradas.
+- `clinica.h` e `clinica.c`: funções de apoio para integração, mantidas nos testes.
+- `main.c`: menu do colega, chamadas diretas aos TADs e validação das entradas.
 - `Makefile`: compilação, execução e testes pelo comando `make`.
 - `tests/`: testes das estruturas, da integração e do menu.
 - [EXPLICACAO_ESTRUTURAS.md](EXPLICACAO_ESTRUTURAS.md): exemplos de ponteiros,
@@ -51,16 +51,22 @@ externas obrigatórias para sua execução.
 
 ## Usar o menu
 
-1. Cadastrar paciente (opção 1) e médico (7).
-2. Adicionar o paciente à fila pelo ID (5).
-3. Atender o primeiro paciente (12); o médico avança automaticamente.
-4. Consultar o último atendimento (15) ou listar o histórico (14).
-5. Desfazer (13): o paciente volta ao início da fila. A escala médica mantém
+Ao iniciar, escolha `1` para carregar três pacientes e três médicos de exemplo,
+ou `0` para começar com as estruturas vazias.
+
+1. Cadastrar paciente (opção 1) e médico (3). Após cadastrar o paciente, o menu
+   pergunta se ele já deve ser colocado na fila.
+2. Encaminhar um paciente já cadastrado à fila pelo ID (2).
+3. Atender o primeiro paciente (4); o médico avança automaticamente.
+4. Listar o histórico (9), do atendimento mais recente ao mais antigo.
+5. Desfazer (5): o paciente volta ao início da fila. A escala médica mantém
    sua posição atual.
 6. Sair (0): todas as estruturas são liberadas.
 
-O menu também permite buscar, remover e listar pacientes, listar a fila,
-avançar/remover o médico atual e listar a escala. IDs no menu são positivos;
+As outras opções são passar o plantão manualmente (6), exibir a fila (7),
+exibir a escala (8) e listar o cadastro (10). Busca e remoção de pacientes,
+remoção de médicos e consulta ao topo continuam disponíveis nos TADs e nos
+testes, embora não tenham opções próprias neste menu. IDs no menu são positivos;
 idade aceita inteiros não negativos. Nomes aceitam até 49 bytes e sintomas
 até 99 bytes, reservando espaço para o terminador. Campos vazios e entradas
 fora dos limites são solicitados novamente.
@@ -79,7 +85,7 @@ make test-asan CC=clang
 ```
 
 `make test` executa as quatro suítes em C, incluindo falhas simuladas de
-alocação. No Windows, também executa os três cenários do menu pelo PowerShell.
+alocação. No Windows, também executa os cenários do menu pelo PowerShell.
 Em Linux/macOS, esse alvo executa as suítes em C; os cenários do menu usam
 o script PowerShell fornecido para Windows.
 
@@ -93,3 +99,7 @@ Os alvos de execução, compilação e testes foram verificados com GNU Make 4.4
 Os testes normais e com ASan passaram no Windows com Clang 23.1.3. Foram
 verificados o fluxo completo, a preservação de dados em falhas de memória,
 todas as opções do menu, textos no limite e encerramento por EOF.
+
+No VS Code, a tarefa padrão **Compilar Clinica** chama `make build` para compilar
+todos os módulos. A tarefa **Executar Clinica** chama `make run`. As tarefas
+não dependem de um caminho particular de compilador no computador do colega.

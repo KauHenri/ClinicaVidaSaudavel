@@ -11,9 +11,10 @@ e fila vieram da branch do colega e foram mantidos sem alterações.
 e um `Medico`, ambos por valor. Assim não há ponteiros frágeis para outros nós
 nem uma segunda definição de paciente.
 
-`main.c` contém o menu e a leitura de dados. `clinica.h` e `clinica.c` agrupam
-os quatro TADs e coordenam fila, escala e histórico nas operações de atender
-e desfazer. Esse agrupamento não cria novos nós nem substitui qualquer TAD.
+`main.c` contém o menu do colega, a leitura de dados e as chamadas diretas aos
+quatro TADs. `clinica.h` e `clinica.c` continuam disponíveis como funções de
+apoio, exercitadas pelos testes de integração. O agrupamento `Clinica` dessas
+funções não cria novos nós nem substitui qualquer TAD.
 
 ## 2. Como usar os TADs
 
@@ -216,16 +217,17 @@ as cópias têm tamanho fixo. A pilha ocupa O(n) e usa O(1) de espaço auxiliar.
 
 ## 6. Integração com o cadastro e a fila
 
-`Clinica` reúne `pacientes`, `fila`, `medicos` e `historico`. Inicializar e
-liberar esse agrupamento chama as quatro funções de inicialização/liberação.
-As operações do menu usam as interfaces públicas, sem acessar os nós.
+O menu mantém quatro variáveis locais: `cadastro`, `fila_espera`,
+`escala_medicos` e `historico`. Inicializa e libera cada uma com as funções
+do respectivo TAD. As operações usam as interfaces públicas, sem acessar os nós.
 
-`colocar_paciente_na_fila` busca um ID no cadastro e passa a cópia encontrada
+`acao_enfileirar_paciente` busca um ID no cadastro e passa a cópia encontrada
 para `enfileirar_paciente`. Se o ID não existir ou faltar memória, a fila não muda.
+`colocar_paciente_na_fila`, em `clinica.c`, oferece esse mesmo fluxo como apoio.
 
 ### Atendimento com preservação de dados
 
-`atender_proximo_paciente`, em `clinica.c`, segue esta ordem:
+`acao_realizar_atendimento`, em `main.c`, segue esta ordem:
 
 1. Consultar o paciente na frente, sem retirá-lo.
 2. Consultar o médico atual. Sem médico, o paciente continua aguardando.
@@ -235,21 +237,22 @@ para `enfileirar_paciente`. Se o ID não existir ou faltar memória, a fila não
 
 O PUSH é a única etapa desse fluxo que aloca. Se faltar memória, fila, escala
 e histórico continuam como estavam. A retirada e o avanço não alocam.
-Existe uma proteção que desfaz o PUSH se a retirada falhar inesperadamente.
 O programa é sequencial: não há outro atendimento alterando os TADs entre
-essas chamadas.
+essas chamadas. As funções de apoio em `clinica.c` seguem a mesma ordem e
+também verificam retornos inesperados após a consulta.
 
 ### Desfazimento com preservação de dados
 
-`desfazer_ultimo_atendimento` segue esta ordem:
+`acao_desfazer_atendimento`, em `main.c`, segue esta ordem:
 
 1. Executar PEEK para consultar o último registro sem removê-lo.
 2. Chamar `devolver_inicio_fila` com `registro.paciente`.
 3. Somente após a devolução funcionar, executar POP e entregar a cópia ao menu.
 
 Se a alocação do nó da fila falhar, o registro continua na pilha e pode ser
-usado numa nova tentativa. POP não aloca memória. Se houver uma falha
-inesperada no POP, a entrada recém-devolvida é retirada para restaurar a fila.
+usado numa nova tentativa. POP não aloca memória e recebe uma pilha não vazia,
+confirmada pelo PEEK. A função de apoio `desfazer_ultimo_atendimento` também
+implementa esse fluxo e confere retornos inesperados.
 
 Exemplo com pacientes P1, P2, P3 e médicos Ana e Bruno:
 
@@ -291,6 +294,9 @@ número inteiro foi lido por completo e cabe no intervalo permitido.
 Uma linha longa é descartada e solicitada novamente, sem contaminar a próxima
 pergunta. Campos vazios são rejeitados; espaços nas extremidades são retirados.
 EOF encerra o programa e libera os quatro TADs, mesmo no meio de um cadastro.
+Antes de inserir um paciente ou médico, o menu confere se a entrada terminou,
+evitando cadastros incompletos. O início oferece dados de exemplo para facilitar
+a demonstração: pacientes 101, 102 e 103, e médicos 1, 2 e 3.
 
 ## 7. Testes reproduzíveis
 
@@ -326,7 +332,7 @@ após excluir cadastros e médicos e falhas de alocação sem perda de dados.
 passa por todas as opções, confere as saídas em ordem, testa entradas inválidas,
 overflow numérico, textos longos, tamanhos máximos e EOF com estruturas ocupadas.
 
-O alvo `make test-asan` executa as quatro suítes em C e, no Windows, os três cenários do menu
+O alvo `make test-asan` executa as quatro suítes em C e, no Windows, os cenários do menu
 com AddressSanitizer. Todos passaram na execução normal e com ASan. A
 contabilização dos TADs complementa essa verificação: não confundir ASan
 com uma garantia de detecção automática de todos os vazamentos no Windows.
@@ -343,10 +349,12 @@ O alocador de teste terminou com zero alocações pendentes nos quatro TADs.
    depois mostrar a remoção do único nó.
 7. Abrir `pilha.h` e `pilha.c`: explicar a fotografia do atendimento e o topo.
 8. Fazer PUSH de A, B e C; demonstrar PEEK e POP devolvendo C, B e A.
-9. Abrir `clinica.c`: explicar PUSH antes da retirada e devolução antes do POP.
+9. Abrir as ações de atendimento em `main.c`: explicar PUSH antes da retirada
+   e devolução antes do POP.
    Mostrar como a cópia permanece válida após excluir cadastro ou médico.
-10. No menu, cadastrar dois pacientes e dois médicos, enfileirar, atender,
-    consultar histórico e desfazer. Mostrar a prioridade da fila e a rotação.
+10. No menu, carregar os exemplos ou cadastrar pacientes e médicos,
+    enfileirar (2), atender (4), consultar histórico (9) e desfazer (5).
+    Mostrar a prioridade da fila e a rotação.
 11. Abrir o terminal e usar `make` para demonstrar o menu; depois usar
     `make test` e explicar os retornos de vazio e falha de alocação.
 12. Encerrar mostrando as funções de liberação e justificando as complexidades:
