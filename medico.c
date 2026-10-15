@@ -1,35 +1,29 @@
 #include "medico.h"
-
 #include <stdlib.h>
 #include <string.h>
 
-/* Cada no guarda uma copia do medico e o endereco do seguinte.
- * Na lista circular, o ultimo no aponta de volta ao atual, nunca a NULL.
- * O ponteiro atual indica onde comeca a escala de plantao neste momento. */
+// estrutura interna do no da lista circular
 struct NoMedico {
     Medico dados;
     struct NoMedico *prox;
 };
 
-void inicializar_medicos(ListaMedicos *lista)
-{
+// inicia lista de medicos vazia
+void inicializar_medicos(ListaMedicos *lista) {
     if (lista != NULL) {
         lista->atual = NULL;
     }
 }
 
-ResultadoMedico inserir_medico(ListaMedicos *lista, Medico medico)
-{
-    NoMedico *ultimo = NULL;
-    NoMedico *novo;
-
-    if (lista == NULL || memchr(medico.nome, '\0', sizeof medico.nome) == NULL) {
+// insere novo medico na lista circular
+ResultadoMedico inserir_medico(ListaMedicos *lista, Medico medico) {
+    if (lista == NULL || memchr(medico.nome, '\0', sizeof(medico.nome)) == NULL) {
         return MEDICO_ARGUMENTO_INVALIDO;
     }
 
-    /* Uma volta inteira permite rejeitar IDs repetidos e encontrar o ultimo
-     * no relativo ao atual. Fazer a busca antes de alocar evita trabalho
-     * desnecessario quando o cadastro ja existe. */
+    NoMedico *ultimo = NULL;
+
+    // se ja tem medicos, da uma volta pra ver se tem id duplicado
     if (lista->atual != NULL) {
         NoMedico *cursor = lista->atual;
         do {
@@ -41,27 +35,28 @@ ResultadoMedico inserir_medico(ListaMedicos *lista, Medico medico)
         } while (cursor != lista->atual);
     }
 
-    novo = malloc(sizeof *novo);
+    // aloca memoria pro novo no
+    NoMedico *novo = (NoMedico*) malloc(sizeof(NoMedico));
     if (novo == NULL) {
         return MEDICO_SEM_MEMORIA;
     }
     novo->dados = medico;
 
-    /* Na primeira insercao, o no aponta para si mesmo e se torna atual.
-     * Depois, o novo no entra entre o ultimo e o atual. Os dois enlaces
-     * mantem o circulo fechado, sem trocar o medico que esta de plantao. */
+    // se for o primeiro medico, aponta para ele mesmo
     if (lista->atual == NULL) {
         novo->prox = novo;
         lista->atual = novo;
     } else {
+        // insere no anel circular
         novo->prox = lista->atual;
         ultimo->prox = novo;
     }
+
     return MEDICO_OK;
 }
 
-ResultadoMedico avancar_medico(ListaMedicos *lista)
-{
+// passa a vez pro proximo medico da escala
+ResultadoMedico avancar_medico(ListaMedicos *lista) {
     if (lista == NULL) {
         return MEDICO_ARGUMENTO_INVALIDO;
     }
@@ -69,58 +64,53 @@ ResultadoMedico avancar_medico(ListaMedicos *lista)
         return MEDICO_LISTA_VAZIA;
     }
 
-    /* Nao e preciso procurar o primeiro: a propria ligacao circular faz
-     * o ultimo retornar ao inicio. Com um no, prox aponta para ele mesmo. */
     lista->atual = lista->atual->prox;
     return MEDICO_OK;
 }
 
-ResultadoMedico consultar_medico_atual(const ListaMedicos *lista, Medico *saida)
-{
+// pega os dados do medico atual
+ResultadoMedico consultar_medico_atual(const ListaMedicos *lista, Medico *saida) {
     if (lista == NULL || saida == NULL) {
         return MEDICO_ARGUMENTO_INVALIDO;
     }
     if (lista->atual == NULL) {
         return MEDICO_LISTA_VAZIA;
     }
+
     *saida = lista->atual->dados;
     return MEDICO_OK;
 }
 
-ResultadoMedico remover_medico_atual(ListaMedicos *lista)
-{
-    NoMedico *removido;
-
+// remove o medico atual do plantao
+ResultadoMedico remover_medico_atual(ListaMedicos *lista) {
     if (lista == NULL) {
         return MEDICO_ARGUMENTO_INVALIDO;
     }
     if (lista->atual == NULL) {
         return MEDICO_LISTA_VAZIA;
     }
-    removido = lista->atual;
 
-    /* Se prox aponta para o proprio no, ele e o unico medico. A lista
-     * precisa ficar vazia antes de liberar esse endereco. */
+    NoMedico *removido = lista->atual;
+
+    // se tiver apenas um medico na lista
     if (removido->prox == removido) {
         lista->atual = NULL;
     } else {
+        // acha o anterior para atualizar o ponteiro
         NoMedico *anterior = removido;
-        /* Como a lista e simplesmente encadeada, precisamos encontrar
-         * o antecessor para faze-lo saltar o no que sera removido. */
         while (anterior->prox != removido) {
             anterior = anterior->prox;
         }
         anterior->prox = removido->prox;
         lista->atual = removido->prox;
     }
+
     free(removido);
     return MEDICO_OK;
 }
 
-void listar_medicos(const ListaMedicos *lista, FILE *saida)
-{
-    const NoMedico *cursor;
-
+// mostra todos os medicos dando uma volta completa
+void listar_medicos(const ListaMedicos *lista, FILE *saida) {
     if (lista == NULL || saida == NULL) {
         return;
     }
@@ -129,10 +119,7 @@ void listar_medicos(const ListaMedicos *lista, FILE *saida)
         return;
     }
 
-    /* Esperar NULL causaria um loop infinito. Comecamos no atual e
-     * paramos quando voltamos a ele, depois de visitar cada no uma vez.
-     * O cursor local preserva o ponteiro de plantao durante a consulta. */
-    cursor = lista->atual;
+    const NoMedico *cursor = lista->atual;
     do {
         fprintf(saida, "%sID: %d | Nome: %s\n",
                 cursor == lista->atual ? "[ATUAL] " : "",
@@ -141,29 +128,25 @@ void listar_medicos(const ListaMedicos *lista, FILE *saida)
     } while (cursor != lista->atual);
 }
 
-void liberar_medicos(ListaMedicos *lista)
-{
-    NoMedico *ultimo;
-    NoMedico *cursor;
-
+// libera toda a memoria da lista circular
+void liberar_medicos(ListaMedicos *lista) {
     if (lista == NULL || lista->atual == NULL) {
         return;
     }
 
-    /* Apenas na destruicao, abrimos o circulo para terminar em NULL.
-     * Assim nao precisamos comparar enderecos de nos ja liberados.
-     * Nas operacoes normais a lista permanece sempre circular. */
-    ultimo = lista->atual;
+    // quebra o ciclo para virar uma lista simples terminada em NULL
+    NoMedico *ultimo = lista->atual;
     while (ultimo->prox != lista->atual) {
         ultimo = ultimo->prox;
     }
     ultimo->prox = NULL;
-    cursor = lista->atual;
+
+    NoMedico *cursor = lista->atual;
     lista->atual = NULL;
+
     while (cursor != NULL) {
-        NoMedico *seguinte = cursor->prox;
-        /* Guardamos o proximo endereco antes de liberar o no atual. */
+        NoMedico *prox = cursor->prox;
         free(cursor);
-        cursor = seguinte;
+        cursor = prox;
     }
 }

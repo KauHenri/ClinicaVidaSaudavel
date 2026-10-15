@@ -1,7 +1,7 @@
 #include "clinica.h"
 
-void inicializar_clinica(Clinica *clinica)
-{
+// inicializa os 4 tads
+void inicializar_clinica(Clinica *clinica) {
     if (clinica != NULL) {
         inicializar_lista_pacientes(&clinica->pacientes);
         inicializar_fila(&clinica->fila);
@@ -10,8 +10,8 @@ void inicializar_clinica(Clinica *clinica)
     }
 }
 
-void liberar_clinica(Clinica *clinica)
-{
+// libera a memoria de todos os tads
+void liberar_clinica(Clinica *clinica) {
     if (clinica != NULL) {
         liberar_pilha(&clinica->historico);
         liberar_fila(&clinica->fila);
@@ -20,38 +20,36 @@ void liberar_clinica(Clinica *clinica)
     }
 }
 
-ResultadoClinica colocar_paciente_na_fila(Clinica *clinica, int id)
-{
-    Paciente paciente;
-    ResultadoPaciente busca;
-    ResultadoFila insercao;
-
+// busca paciente no cadastro e poe na fila
+ResultadoClinica colocar_paciente_na_fila(Clinica *clinica, int id) {
     if (clinica == NULL) {
         return CLINICA_ARGUMENTO_INVALIDO;
     }
-    busca = buscar_paciente_por_id(&clinica->pacientes, id, &paciente);
+
+    Paciente paciente;
+    ResultadoPaciente busca = buscar_paciente_por_id(&clinica->pacientes, id, &paciente);
     if (busca == PACIENTE_LISTA_VAZIA || busca == PACIENTE_NAO_ENCONTRADO) {
         return CLINICA_PACIENTE_NAO_CADASTRADO;
     }
     if (busca != PACIENTE_OK) {
         return CLINICA_ARGUMENTO_INVALIDO;
     }
-    insercao = enfileirar_paciente(&clinica->fila, paciente);
+
+    ResultadoFila insercao = enfileirar_paciente(&clinica->fila, paciente);
     if (insercao == FILA_SEM_MEMORIA) {
         return CLINICA_SEM_MEMORIA;
     }
-    return insercao == FILA_OK ? CLINICA_OK : CLINICA_ARGUMENTO_INVALIDO;
+
+    return (insercao == FILA_OK) ? CLINICA_OK : CLINICA_ARGUMENTO_INVALIDO;
 }
 
-ResultadoClinica atender_proximo_paciente(Clinica *clinica, Atendimento *saida)
-{
-    Atendimento registro;
-    Paciente retirado;
-    ResultadoPilha insercao;
-
+// atende quem esta na frente da fila e avanca o medico
+ResultadoClinica atender_proximo_paciente(Clinica *clinica, Atendimento *saida) {
     if (clinica == NULL || saida == NULL) {
         return CLINICA_ARGUMENTO_INVALIDO;
     }
+
+    Atendimento registro;
     if (consultar_frente_fila(&clinica->fila, &registro.paciente) != FILA_OK) {
         return CLINICA_FILA_VAZIA;
     }
@@ -59,10 +57,8 @@ ResultadoClinica atender_proximo_paciente(Clinica *clinica, Atendimento *saida)
         return CLINICA_SEM_MEDICOS;
     }
 
-    /* Consultamos sem retirar. PUSH e a unica etapa que aloca memoria aqui.
-     * Se ela falhar, o paciente ainda espera na mesma posicao, o medico
-     * continua atual e o historico anterior permanece intacto. */
-    insercao = empilhar_atendimento(&clinica->historico, registro);
+    // empilha no historico
+    ResultadoPilha insercao = empilhar_atendimento(&clinica->historico, registro);
     if (insercao == PILHA_SEM_MEMORIA) {
         return CLINICA_SEM_MEMORIA;
     }
@@ -70,37 +66,33 @@ ResultadoClinica atender_proximo_paciente(Clinica *clinica, Atendimento *saida)
         return CLINICA_ARGUMENTO_INVALIDO;
     }
 
-    /* A retirada nao aloca memoria. Em uma clinica inicializada, sem
-     * alteracoes entre as chamadas, ela deve remover o paciente consultado.
-     * Se houver uma falha inesperada, desfazemos o PUSH antes de retornar. */
+    // tira da fila
+    Paciente retirado;
     if (desenfileirar_paciente(&clinica->fila, &retirado) != FILA_OK) {
         Atendimento descartado;
         (void)desempilhar_atendimento(&clinica->historico, &descartado);
         return CLINICA_ESTADO_INVALIDO;
     }
-    /* A consulta anterior confirmou um medico; o circulo nao mudou desde
-     * entao. O avanco nao aloca e so ocorre apos concluir o atendimento. */
+
+    // roda a escala
     (void)avancar_medico(&clinica->medicos);
     *saida = registro;
     return CLINICA_OK;
 }
 
-ResultadoClinica desfazer_ultimo_atendimento(Clinica *clinica, Atendimento *saida)
-{
-    Atendimento registro;
-    ResultadoFila devolucao;
-
+// desfaz o atendimento: devolve paciente pra fila e desempilha
+ResultadoClinica desfazer_ultimo_atendimento(Clinica *clinica, Atendimento *saida) {
     if (clinica == NULL || saida == NULL) {
         return CLINICA_ARGUMENTO_INVALIDO;
     }
+
+    Atendimento registro;
     if (consultar_topo(&clinica->historico, &registro) != PILHA_OK) {
         return CLINICA_HISTORICO_VAZIO;
     }
 
-    /* A devolucao precisa de um novo no na fila. Fazemos PEEK primeiro e
-     * mantemos o registro na pilha enquanto essa alocacao nao terminar.
-     * Assim, se faltar memoria, podemos tentar desfazer novamente depois. */
-    devolucao = devolver_inicio_fila(&clinica->fila, registro.paciente);
+    // devolve pro inicio da fila
+    ResultadoFila devolucao = devolver_inicio_fila(&clinica->fila, registro.paciente);
     if (devolucao == FILA_SEM_MEMORIA) {
         return CLINICA_SEM_MEMORIA;
     }
@@ -108,13 +100,13 @@ ResultadoClinica desfazer_ultimo_atendimento(Clinica *clinica, Atendimento *said
         return CLINICA_ARGUMENTO_INVALIDO;
     }
 
-    /* POP nao aloca. Se ocorrer uma falha inesperada, retiramos apenas a
-     * entrada que acabamos de devolver, preservando a fila anterior. */
+    // remove da pilha
     if (desempilhar_atendimento(&clinica->historico, &registro) != PILHA_OK) {
         Paciente descartado;
         (void)desenfileirar_paciente(&clinica->fila, &descartado);
         return CLINICA_ESTADO_INVALIDO;
     }
+
     *saida = registro;
     return CLINICA_OK;
 }

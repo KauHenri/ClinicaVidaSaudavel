@@ -14,14 +14,15 @@ typedef struct {
     char sintoma[PACIENTE_TAMANHO_SINTOMA];
 } Paciente;
 
-// encapsulamento da lista
+// no privado em paciente.c
 typedef struct NoPaciente NoPaciente;
 
+// TAD da lista de pacientes
 typedef struct {
     NoPaciente *inicio;
 } ListaPacientes;
 
-// códigos de retorno para saber se uma operação deu certo ou deu erro
+// codigos de retorno
 typedef enum {
     PACIENTE_OK,
     PACIENTE_LISTA_VAZIA,
@@ -31,17 +32,12 @@ typedef enum {
     PACIENTE_ARGUMENTO_INVALIDO
 } ResultadoPaciente;
 
-// as funções que a lista vai ter:
+// funcoes da lista
 void inicializar_lista_pacientes(ListaPacientes *lista);
 ResultadoPaciente inserir_paciente(ListaPacientes *lista, Paciente p);
 ResultadoPaciente buscar_paciente_por_id(const ListaPacientes *lista, int id, Paciente *saida);
 ResultadoPaciente remover_paciente(ListaPacientes *lista, int id);
 void listar_pacientes(const ListaPacientes *lista, FILE *saida);
 void liberar_lista_pacientes(ListaPacientes *lista);
-
-
-
-
-
 
 #endif
